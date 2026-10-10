@@ -1,11 +1,27 @@
 # .gitignore
 
-# 1. Python Artifacts (Junk)
+# 1. Python Artifacts & Virtual Environments
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 venv/
+.venv/
+env/
+ENV/
+
+# Environment Configuration Files (Keep examples, ignore actual secrets)
 .env
+.env.*
+!.env.example
+thresholds.env
+thresholds.env.*
+!thresholds.env.example
+
+# Temporary and Download Files
+*.tmp
+*.temp
+*.download
 
 # 2. Large Data Files (NEVER commit these)
 data/inputs/*
@@ -29,12 +45,19 @@ models/*.safetensors
 models/*.json
 models/*.txt
 models/*.py
+!models/NOTE.txt
 !models/Note.txt
+!models/.gitkeep
 
 # 4. Evidence/Logs
 evidence/*
 logs/*
+!evidence/.gitkeep
+!logs/.gitkeep
 
-# 5. IDE Settings
+# 5. IDE & OS Settings
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+desktop.ini

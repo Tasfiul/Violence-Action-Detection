@@ -13,13 +13,16 @@ class EvidenceManager:
     """
     def __init__(self):
         # Configuration
-        self.window_size = cfg['action'].get('window_size', 16)
+        self.window_size = cfg['action'].get('window_size', 8)
+        self.stride = cfg['action'].get('stride', 4)
+        self.crop_context_ratio = cfg['action'].get('crop_context_ratio', 0.20)
         
         # Standard input size for CoCa/CLIP
         self.target_size = (224, 224) 
         
         # The Main Database: { tracker_id: deque([frame1, frame2, ...]) }
         self.buffers = {}
+        self.frame_counts = {}
         
     def update(self, frame, detections):
         """
@@ -48,13 +51,14 @@ class EvidenceManager:
             # 3. Initialize buffer if new person
             if tracker_id not in self.buffers:
                 self.buffers[tracker_id] = deque(maxlen=self.window_size)
+                self.frame_counts[tracker_id] = 0
             
             # 4. Add to Memory
             self.buffers[tracker_id].append(crop)
+            self.frame_counts[tracker_id] += 1
             
-            # 5. Check if we have enough history to analyze
-            # We only send data if we have exactly window_size frames
-            if len(self.buffers[tracker_id]) == self.window_size:
+            # 5. Check if we have enough history to analyze and stride interval is reached
+            if len(self.buffers[tracker_id]) == self.window_size and (self.frame_counts[tracker_id] % self.stride == 0):
                 # Convert deque to list for the AI Engine
                 ready_clips[tracker_id] = list(self.buffers[tracker_id])
 
@@ -71,11 +75,17 @@ class EvidenceManager:
         x1, y1, x2, y2 = map(int, box)
         h, w, _ = frame.shape
         
+        # Add context margin so arms, punches, and interacting persons are captured
+        bw = x2 - x1
+        bh = y2 - y1
+        pad_x = int(bw * self.crop_context_ratio)
+        pad_y = int(bh * self.crop_context_ratio)
+        
         # Clamp coordinates to be inside the image (Prevent crashes)
-        x1 = max(0, x1)
-        y1 = max(0, y1)
-        x2 = min(w, x2)
-        y2 = min(h, y2)
+        x1 = max(0, x1 - pad_x)
+        y1 = max(0, y1 - pad_y)
+        x2 = min(w, x2 + pad_x)
+        y2 = min(h, y2 + pad_y)
         
         # Extract the crop
         crop = frame[y1:y2, x1:x2]
@@ -98,3 +108,5 @@ class EvidenceManager:
         for mid in existing_ids:
             if mid not in active_ids:
                 del self.buffers[mid]
+                if mid in self.frame_counts:
+                    del self.frame_counts[mid]

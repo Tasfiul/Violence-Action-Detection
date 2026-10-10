@@ -6,7 +6,9 @@ system:
   device: "cuda"           # Options: cuda, cpu, mps
   log_level: "INFO"        # Options: DEBUG, INFO, WARNING, ERROR
   display_resolution: [1280, 720]
-  record_indident: true
+  record_incident: true    # Save incident video clips
+  save_screenshot: true    # Save screenshot of detected incident
+  headless: false          # Set to true to run without opening GUI window
   pre_event_seconds: 2
   post_event_seconds: 3
 
@@ -24,41 +26,68 @@ detection:
 
 # Phase 2: Action Recognition (FreeZAD)
 action:
+  # Offload Phase 2 Action Recognition to CPU so the GPU is 100% dedicated to YOLO & GUI (enables 60 FPS video without freezes)
+  device: "cpu"
   # Model Architecture Name (Must match OpenCLIP library names)
   model_name: "coca_ViT-L-14"
-  alert_trigger_count: 3
+  alert_trigger_count: 2
   # Path to the .bin file you just downloaded
   weights_path: "models/coca_l14.bin"
   # The window size (Time). 8 frames is the standard for video clips.
   window_size: 8
-  # We don't need to analyze every single frame. We skip every 3rd frame to save GPU.
+  # Stride: emit clips every N frames to save CPU/GPU
   stride: 4
-  # Sensitivity. If score > 0.75, it's a fight.
-  threshold: 0.85
-  ors_threshold: 0.35
+  # Motion gating: minimum motion difference required to trigger CoCa (skips stationary/idle persons, 0% compute)
+  motion_threshold: 15.0
+  # Analysis cooldown: minimum seconds to wait before re-analyzing the same person
+  analysis_cooldown: 1.5
+  # Number of keyframes from clip passed to ViT-L-14 (1 keyframe = ~0.88s inference on CPU)
+  sample_frames: 1
+  # Minimum confidence threshold (60%) for an action to be classified as violent
+  threshold: 0.60
+  # Open-Set Recognition threshold (filters out idle postures at ~0.21 similarity while capturing fights at ~0.32+)
+  osr_threshold: 0.25
+  ors_threshold: 0.25
   # The text prompts FreeZAD will search for
   prompts:
     - "a person punching"
+    - "throwing a punch"
+    - "punching at someone"
     - "people fighting"
     - "two people violently fighting each other"
     - "kicking someone"
     - "person falling down"
     - "shooting with gun"
     - "injured"
-    - "a person engaged in normal, non-violent everyday behavior"
+    - "standing normally"
+    - "sitting at a desk"
+    - "walking normally"
     - "normal behavior"
 
   # The exact strings the State Machine should ignore
   safe_prompts:
     - "normal behavior"
-    - "a person engaged in normal, non-violent everyday behavior"
+    - "standing normally"
+    - "sitting at a desk"
+    - "walking normally"
 
   ui_labels:
-    "a person engaged in normal, non-violent everyday behavior": "safe"
-    "unknown_benign_activity": "analyzing..."
+    "normal behavior": "safe"
+    "standing normally": "safe"
+    "sitting at a desk": "safe"
+    "walking normally": "safe"
+    "unknown_benign_activity": "safe"
+    "a person punching": "PUNCHING"
+    "throwing a punch": "PUNCHING"
+    "punching at someone": "PUNCHING"
+    "people fighting": "FIGHTING"
+    "two people violently fighting each other": "FIGHTING"
+    "kicking someone": "KICKING"
+    "person falling down": "FALLEN"
 
 # Phase 3: Vision-Language Model (Ollama Microservice)
 vlm:
+  enabled: false # Set to false to skip Ollama Phase 3 entirely
   provider: "local" # Toggle between 'local' or 'cloud'
 
   # Dynamic Strategy Loading
@@ -82,3 +111,15 @@ vlm:
     You are a security AI. Review these chronological frames from a CCTV camera. 
     Is there a violent physical altercation happening? 
     Respond strictly in JSON format with 'threat_detected' (boolean) and 'description' (string).
+
+# ==========================================
+# MongoDB Incident Archive & Cloud Storage
+# ==========================================
+mongodb:
+  enabled: false
+  uri: "mongodb://localhost:27017"
+  upload_delay_seconds: 2.0
+  upload_videos: true
+  upload_screenshots: true
+  timeout_ms: 5000
+

@@ -1,6 +1,6 @@
 # --- Critical: PyTorch with CUDA 12.1 Support ---
 # This line forces pip to download from the Nvidia server instead of the default one
---index-url https://download.pytorch.org/whl/cu121
+#--index-url https://download.pytorch.org/whl/cu121
 
 # --- Core Math & Image Processing ---
 numpy>=1.24.0          # The backbone of all matrix operations (LogOIC math)
@@ -30,9 +30,15 @@ timm                   # Required by DepthAnything V2
 
 # --- System Utilities ---
 pyyaml                 # To read config.yaml
+python-dotenv          # To load .env hardware and performance profiles
 scipy                  # For the FFT (Fast Fourier Transform) in FreeZAD calibration
 tqdm                   # Progress bars
 colorama               # Colored terminal output
 
-# ---Connecting to qwen via api
+# --- Connecting to qwen via api
 ollama
+
+# --- Web Interface & Storage ---
+flask>=3.0.0
+pymongo>=4.6.0         # MongoDB client for incident video & telemetry database uploads
+av>=11.0.0             # Fast CPU H.264 encoding and faststart muxing

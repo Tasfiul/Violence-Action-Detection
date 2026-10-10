@@ -1,7 +1,10 @@
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import cv2
-import time
 import json
+import time
 from glob import glob
 from src.utils.logger import logger
 from src.utils.config_loader import cfg
@@ -21,7 +24,7 @@ class ThesisEvaluator:
         self.brain = ActionRecognizer()
         
         self.conf_threshold = cfg['action']['threshold']
-        self.trigger_count = cfg['action'].get('alert_trigger_count', 3)
+        self.trigger_count = cfg['action'].get('alert_trigger_count', 2)
         self.safe_actions = [
             'a person standing completely upright and casually walking forward', 
             'a person standing completely still and doing nothing',

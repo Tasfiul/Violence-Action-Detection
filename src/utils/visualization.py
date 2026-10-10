@@ -32,11 +32,13 @@ class Visualizer:
             x1, y1, x2, y2 = map(int, box)
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 3)
             
-            # Draw Text Background
+            # Draw Text Background & Text (clamp so it doesn't clip top of screen)
             (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-            cv2.rectangle(annotated_frame, (x1, y1 - 25), (x1 + tw, y1), color, -1)
-            
-            # Draw Text
-            cv2.putText(annotated_frame, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+            if y1 >= 25:
+                cv2.rectangle(annotated_frame, (x1, y1 - 25), (x1 + tw + 4, y1), color, -1)
+                cv2.putText(annotated_frame, label, (x1 + 2, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+            else:
+                cv2.rectangle(annotated_frame, (x1, y1), (x1 + tw + 4, y1 + th + 10), color, -1)
+                cv2.putText(annotated_frame, label, (x1 + 2, y1 + th + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
             
         return annotated_frame

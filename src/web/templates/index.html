@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinAI // Neural Violence & Action Detection Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261010-04">
+</head>
+<body>
+    <!-- Background Ambient Glows -->
+    <div class="glow-bg glow-primary"></div>
+    <div class="glow-bg glow-accent"></div>
+
+    <div class="app-container">
+        <!-- Top Navigation & Global Telemetry Header -->
+        <header class="top-nav">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <circle cx="12" cy="11" r="3"/>
+                    </svg>
+                    <span class="pulse-beacon"></span>
+                </div>
+                <div>
+                    <h1 class="brand-title">SENTIN<span>AI</span></h1>
+                    <p class="brand-subtitle">Real-Time Threat Detection & Forensic Evidence System</p>
+                </div>
+            </div>
+
+            <!-- Global Telemetry Bar -->
+            <div class="telemetry-bar">
+                <div class="telemetry-item">
+                    <span class="label">ENGINE STATUS</span>
+                    <div class="value-wrap">
+                        <span id="systemStatusPill" class="status-pill status-ready">STANDBY</span>
+                    </div>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">LIVE INFERENCE</span>
+                    <span id="fpsCounter" class="value mono">0.0 <span class="unit">FPS</span></span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">ACTIVE TRACKS</span>
+                    <span id="activeTracksCounter" class="value mono">0</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">THREAT LEVEL</span>
+                    <span id="threatLevelBadge" class="threat-badge threat-level-0">NORMAL</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">ACCELERATION</span>
+                    <span class="value mono highlight">CUDA // FP16</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="label">CLOUD ARCHIVE</span>
+                    <span id="mongoStatusBadge" class="status-pill status-ready" title="MongoDB Cloud Incident Storage Status">STANDBY</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Viewport Section (Hero Space) -->
+        <main class="viewport-section">
+            <!-- Viewport Command Toolbar -->
+            <div class="command-toolbar">
+                <div class="toolbar-group">
+                    <button id="btnStartLive" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span>Start Live Stream</span>
+                    </button>
+                    <button id="btnStopStream" class="btn btn-danger" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="6" width="12" height="12"></rect>
+                        </svg>
+                        <span>Stop Stream</span>
+                    </button>
+                    <div class="select-wrapper">
+                        <select id="cameraSourceSelect" title="Select Video Source">
+                            <option value="0">Camera 0 (Default Webcam)</option>
+                            <option value="1">Camera 1 (Secondary)</option>
+                            <option value="data/inputs/V_120.mp4">Sample: Fight Altercation (V_120.mp4)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="toolbar-group">
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="videoFileInput" accept=".mp4,.avi,.mov,.mkv,.webm" style="display: none;">
+                        <button id="btnUploadVideo" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <span>Upload Video File</span>
+                        </button>
+                    </div>
+                    <button id="btnRefreshIncidents" class="btn btn-ghost" title="Reset Feed, Clear AI Memory & Buffers">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span>Reset Feed & Buffers</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Primary Large Cinema Screen Container -->
+            <div class="cinema-display" id="cinemaDisplay">
+                <div class="screen-hud hud-top-left">
+                    <div class="hud-tag" id="hudSourceName"><span class="dot"></span> SOURCE: STANDBY</div>
+                    <div class="hud-tag" id="hudResolution">RES: 1280x720</div>
+                </div>
+                
+                <div class="screen-hud hud-top-right">
+                    <div id="hudThreatPill" class="threat-pill threat-pill-safe">
+                        <span class="pulse-ring"></span>
+                        <span id="hudThreatText">STATUS: NORMAL</span>
+                    </div>
+                </div>
+
+                <!-- The Live MJPEG Stream -->
+                <div class="video-feed-wrapper">
+                    <img id="streamImage" src="/video_feed" alt="Neural Video Analysis Stream">
+                    <div class="scanline-overlay"></div>
+                </div>
+
+                <div class="screen-hud hud-bottom-left">
+                    <div class="hud-meta">SENTINAI DEEP PERCEPTION ENGINE // YOLOv8 + CoCa ViT-L-14</div>
+                </div>
+
+                <div class="screen-hud hud-bottom-right">
+                    <div class="hud-clock mono" id="hudClock">00:00:00</div>
+                </div>
+
+                <!-- Corner HUD Brackets for Sci-Fi / Surveillance look -->
+                <div class="hud-bracket bracket-tl"></div>
+                <div class="hud-bracket bracket-tr"></div>
+                <div class="hud-bracket bracket-bl"></div>
+                <div class="hud-bracket bracket-br"></div>
+            </div>
+            
+            <!-- Analysis State Notification Bar -->
+            <div class="analysis-status-strip" id="statusStrip">
+                <span class="pulse-indicator"></span>
+                <span id="statusStripMessage">System ready. Select a camera or upload a video file to begin analysis.</span>
+            </div>
+        </main>
+
+        <!-- Bottom Full-Width Section: Forensic Evidence & Incident Locker -->
+        <section class="incident-section">
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <div class="title-with-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                            <line x1="7" y1="2" x2="7" y2="22"></line>
+                            <line x1="17" y1="2" x2="17" y2="22"></line>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <line x1="2" y1="7" x2="7" y2="7"></line>
+                            <line x1="2" y1="17" x2="7" y2="17"></line>
+                            <line x1="17" y1="17" x2="22" y2="17"></line>
+                            <line x1="17" y1="7" x2="22" y2="7"></line>
+                        </svg>
+                        <h2>Forensic Incident & Evidence Locker</h2>
+                    </div>
+                    <p class="section-desc">
+                        Buffered pre-event and post-event altercation clips, threat keyframes, and forensic reasoner logs.
+                    </p>
+                </div>
+
+                <div class="incident-filters">
+                    <span class="count-badge" id="incidentCountBadge">0 Recorded Incidents</span>
+                    <button class="filter-tab active" data-filter="all">All Events</button>
+                    <button class="filter-tab" data-filter="video">With Video Clip</button>
+                    <button class="filter-tab" data-filter="screenshot">With Screenshot</button>
+                </div>
+            </div>
+
+            <!-- Incidents Cards Grid -->
+            <div class="incident-grid" id="incidentGrid">
+                <!-- Dynamically populated via JavaScript -->
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <span>Scanning forensic archive in data/outputs/...</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal: Video Evidence Player -->
+    <div class="modal" id="videoModal">
+        <div class="modal-backdrop" onclick="closeVideoModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="videoModalTitle">Incident Evidence Clip</h3>
+                    <p class="modal-sub" id="videoModalMeta">Timestamp</p>
+                </div>
+                <button class="btn-close" onclick="closeVideoModal()">&times;</button>
+            </div>
+            <div class="modal-body video-modal-body">
+                <!-- Playback Mode Toolbar -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="display:inline-flex; background:rgba(255,255,255,0.07); padding:3px; border-radius:8px; gap:4px;">
+                        <button id="btnPlayerModeNative" type="button" class="btn btn-card active" onclick="setPlayerMode('native')" style="padding:4px 12px; font-size:12px; margin:0; background:var(--accent);">▶ Direct HTML5</button>
+                        <button id="btnPlayerModeStream" type="button" class="btn btn-card" onclick="setPlayerMode('stream')" style="padding:4px 12px; font-size:12px; margin:0;">⚡ CPU Stream (0% GPU)</button>
+                    </div>
+                    <span id="playerCodecBadge" style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">H.264 FastStart</span>
+                </div>
+
+                <video id="modalVideoPlayer" controls playsinline preload="auto" style="width:100%; max-height:480px; border-radius:8px; background:#000;">
+                    Your browser does not support direct HTML5 video playback.
+                </video>
+                <div id="videoFallbackPlayer" style="display:none; text-align:center; background:#0a0a0f; border-radius:8px; padding:12px; border:1px solid var(--border-color);">
+                    <img id="modalFallbackStream" src="" alt="Evidence video stream fallback" style="max-width:100%; max-height:440px; border-radius:6px; object-fit:contain;">
+                    <div style="margin-top:10px; display:flex; justify-content:center; align-items:center; gap:12px;">
+                        <button type="button" class="btn btn-card" onclick="restartFallbackStream()" style="font-size:12px; padding:4px 12px;">↺ Replay Stream</button>
+                        <span style="font-size:12px; color:var(--text-muted);">Decoded on CPU thread (100% browser compatible, 0% GPU pressure)</span>
+                    </div>
+                </div>
+                <div id="videoErrorBanner" style="display:none; margin-top:10px; padding:10px; background:rgba(255,70,70,0.15); border:1px solid #ff4646; border-radius:6px; font-size:13px; color:#ff9999;">
+                    <span>Browser media player encountered a format restriction. Auto-switched to CPU Stream.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnDeleteCurrentVideo" class="btn btn-modal-delete" onclick="deleteActiveModalIncident()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    <span>Delete Evidence</span>
+                </button>
+                <a id="btnDownloadVideo" href="#" download class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Download Evidence (.mp4)</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: High-Res Screenshot Lightbox -->
+    <div class="modal" id="imageModal">
+        <div class="modal-backdrop" onclick="closeImageModal()"></div>
+        <div class="modal-content image-modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="imageModalTitle">Altercation Keyframe Evidence</h3>
+                    <p class="modal-sub" id="imageModalMeta">Snapshot</p>
+                </div>
+                <button class="btn-close" onclick="closeImageModal()">&times;</button>
+            </div>
+            <div class="modal-body image-modal-body">
+                <img id="modalImageDisplay" src="" alt="High resolution altercation screenshot">
+            </div>
+            <div class="modal-footer">
+                <button id="btnDeleteCurrentImage" class="btn btn-modal-delete" onclick="deleteActiveModalIncident()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    <span>Delete Keyframe</span>
+                </button>
+                <a id="btnDownloadImage" href="#" download class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Download Keyframe (.jpg)</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Forensic VLM Report Inspector -->
+    <div class="modal" id="reportModal">
+        <div class="modal-backdrop" onclick="closeReportModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3>Phase 3 Forensic VLM Report</h3>
+                    <p class="modal-sub" id="reportModalMeta">JSON Analysis</p>
+                </div>
+                <button class="btn-close" onclick="closeReportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="report-summary-box" id="reportSummaryBox">
+                    <h4>Incident Description</h4>
+                    <p id="reportSummaryText">Summary will appear here...</p>
+                </div>
+                <h4>Raw Forensic JSON</h4>
+                <pre class="json-viewer" id="reportJsonViewer"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js?v=20261010-04"></script>
+</body>
+</html>

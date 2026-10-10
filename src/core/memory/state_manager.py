@@ -1,4 +1,5 @@
 import time
+from src.utils.config_loader import cfg
 
 class ThreatState:
     def __init__(self):
@@ -15,9 +16,10 @@ class SecurityStateManager:
     1. Decides if someone is suspicious (Orange) or confirmed dangerous (Red).
     2. Holds the "Memory" of the incident (the VLM report).
     """
-    def __init__(self, alert_trigger_count=3):
+    def __init__(self, alert_trigger_count=2):
         self.states = {} # Maps tracker_id to ThreatState
         self.trigger_count = alert_trigger_count
+        self.timeout_seconds = cfg.get('state', {}).get('timeout_seconds', 10.0)
 
     def _ensure_exists(self, tracker_id):
         if tracker_id not in self.states:
@@ -46,6 +48,12 @@ class SecurityStateManager:
             state.level = 0
             state.label = f"{action_label} ({confidence:.0%})"
 
+    def confirm_threat(self, tracker_id, label="CONFIRMED THREAT"):
+        """Explicitly lock tracker_id to Red (Level 2), useful when Phase 3 is skipped."""
+        state = self._ensure_exists(tracker_id)
+        state.level = 2
+        state.label = label
+
     def update_phase3(self, tracker_id, threat_detected, vlm_summary):
         """Called once by the slow Qwen model when analysis finishes."""
         state = self._ensure_exists(tracker_id)
@@ -73,11 +81,11 @@ class SecurityStateManager:
         return color, state.label
 
     def cleanup(self, active_ids):
-        """Removes memory of IDs that have left the camera for more than 10 seconds."""
+        """Removes memory of IDs that have left the camera for more than timeout_seconds."""
         current_time = time.time()
         expired_ids = [
             tid for tid, state in self.states.items() 
-            if tid not in active_ids and (current_time - state.last_seen > 10.0)
+            if tid not in active_ids and (current_time - state.last_seen > self.timeout_seconds)
         ]
         for tid in expired_ids:
             del self.states[tid]
